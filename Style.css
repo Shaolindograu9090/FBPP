@@ -1,0 +1,172 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap');
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Inter', sans-serif;
+}
+
+body {
+    width: 100%;
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    /* Degradê inspirado na imagem original */
+    background: linear-gradient(to bottom, #a2b9d6 0%, #8ca1c4 100%);
+}
+
+.conteiner {
+    width: 80%;
+    height: 80vh;
+    display: flex;
+    background-color: rgba(255, 255, 255, 0.1); /* Vidro sutil */
+    border-radius: 10px;
+    box-shadow: 0px 10px 20px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+}
+
+/* Lado da Imagem */
+.form-image {
+    width: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: #f0f4f8; /* Fundo claro para a ilustração */
+    padding: 1rem;
+}
+
+.form-image img {
+    width: 90%;
+}
+
+/* Lado do Formulário */
+.form {
+    width: 50%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 3rem;
+    color: white;
+}
+
+.form-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+    padding-bottom: 1rem;
+}
+
+.form-header h1 {
+    font-size: 2rem;
+    font-weight: 600;
+}
+
+.login-button button {
+    border: 1px solid white;
+    background-color: transparent;
+    padding: 0.5rem 1rem;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+.login-button a {
+    text-decoration: none;
+    color: white;
+    font-weight: 500;
+}
+
+/* Grade de Inputs */
+.input-group {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    padding: 1rem 0;
+}
+
+.input-box {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 1.1rem;
+    width: 48%; /* Coloca dois campos por linha */
+}
+
+.input-box label {
+    font-size: 0.8rem;
+    margin-bottom: 0.3rem;
+    font-weight: 500;
+}
+
+.input-box input {
+    padding: 0.8rem;
+    border: none;
+    border-radius: 5px;
+    background-color: white;
+    box-shadow: 1px 1px 6px rgba(0, 0, 0, 0.1);
+}
+
+/* Gênero */
+.gender-inputs {
+    margin-top: 1rem;
+}
+
+.gender-group {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    margin-top: 0.5rem;
+}
+
+.gender-input {
+    display: flex;
+    align-items: center;
+    margin-right: 1rem;
+    font-size: 0.9rem;
+}
+
+.gender-input input {
+    margin-right: 5px;
+}
+
+/* Botão Continuar */
+.continue-button {
+    margin-top: 2rem;
+}
+
+.continue-button button {
+    width: 100%;
+    padding: 0.8rem;
+    border: none;
+    background-color: #6a89cc;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+.continue-button button:hover {
+    background-color: #4a69bd;
+}
+
+.continue-button a {
+    text-decoration: none;
+    color: white;
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+/* Responsividade Básica */
+@media screen and (max-width: 1024px) {
+    .form-image {
+        display: none;
+    }
+    .form {
+        width: 100%;
+    }
+    .conteiner {
+        width: 90%;
+        height: auto;
+    }
+}
