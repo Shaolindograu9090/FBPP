@@ -1,0 +1,155 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <math.h>
+#include <time.h>
+
+// --- Estruturas de Dados ---
+typedef struct {
+    int size;
+    float *neurons;
+    float *biases;
+    float *weights;    // Pesos conectando à camada anterior
+    float *grad_b;     // Gradientes para Bias
+    float *grad_w;     // Gradientes para Pesos
+    float *v_b;        // Momentum para Bias
+    float *v_w;        // Momentum para Pesos
+} Layer;
+
+typedef struct {
+    int num_layers;
+    Layer *layers;
+    float lr;
+    float momentum;
+} MLP;
+
+// --- Ativações e Otimização ---
+float relu(float x) { return x > 0 ? x : 0.01f * x; } // LeakyReLU
+float relu_deriv(float x) { return x > 0 ? 1.0f : 0.01f; }
+
+void apply_softmax(Layer *L) {
+    float max = L->neurons[0], sum = 0;
+    for (int i = 1; i < L->size; i++) if (L->neurons[i] > max) max = L->neurons[i];
+    for (int i = 0; i < L->size; i++) {
+        L->neurons[i] = expf(L->neurons[i] - max);
+        sum += L->neurons[i];
+    }
+    for (int i = 0; i < L->size; i++) L->neurons[i] /= sum;
+}
+
+// --- Funções de Core ---
+MLP* create_mlp(int *sizes, int num_layers, float lr, float m) {
+    MLP *net = malloc(sizeof(MLP));
+    net->num_layers = num_layers;
+    net->lr = lr;
+    net->momentum = m;
+    net->layers = malloc(sizeof(Layer) * num_layers);
+
+    for (int i = 0; i < num_layers; i++) {
+        net->layers[i].size = sizes[i];
+        net->layers[i].neurons = calloc(sizes[i], sizeof(float));
+        net->layers[i].biases = calloc(sizes[i], sizeof(float));
+        net->layers[i].v_b = calloc(sizes[i], sizeof(float));
+        net->layers[i].grad_b = calloc(sizes[i], sizeof(float));
+
+        if (i > 0) {
+            int weights_count = sizes[i] * sizes[i-1];
+            net->layers[i].weights = malloc(sizeof(float) * weights_count);
+            net->layers[i].v_w = calloc(weights_count, sizeof(float));
+            net->layers[i].grad_w = calloc(weights_count, sizeof(float));
+            
+            // Inicialização de Xavier/Glorot
+            float scale = sqrtf(2.0f / sizes[i-1]);
+            for (int j = 0; j < weights_count; j++)
+                net->layers[i].weights[j] = ((float)rand()/RAND_MAX * 2 - 1) * scale;
+        }
+    }
+    return net;
+}
+
+void forward(MLP *net, float *input) {
+    for (int j = 0; j < net->layers[0].size; j++) net->layers[0].neurons[j] = input[j];
+
+    for (int i = 1; i < net->num_layers; i++) {
+        Layer *prev = &net->layers[i-1];
+        Layer *curr = &net->layers[i];
+        for (int j = 0; j < curr->size; j++) {
+            float act = curr->biases[j];
+            for (int k = 0; k < prev->size; k++)
+                act += prev->neurons[k] * curr->weights[j * prev->size + k];
+            curr->neurons[j] = (i == net->num_layers - 1) ? act : relu(act);
+        }
+        if (i == net->num_layers - 1) apply_softmax(curr);
+    }
+}
+
+void backward(MLP *net, float *target) {
+    Layer *out = &net->layers[net->num_layers - 1];
+    float *next_deltas = malloc(sizeof(float) * out->size);
+
+    // Delta Saída (Cross-Entropy + Softmax)
+    for (int i = 0; i < out->size; i++) next_deltas[i] = out->neurons[i] - target[i];
+
+    for (int i = net->num_layers - 1; i > 0; i--) {
+        Layer *curr = &net->layers[i];
+        Layer *prev = &net->layers[i-1];
+        float *current_deltas = calloc(prev->size, sizeof(float));
+
+        for (int j = 0; j < curr->size; j++) {
+            curr->grad_b[j] += next_deltas[j];
+            for (int k = 0; k < prev->size; k++) {
+                curr->grad_w[j * prev->size + k] += next_deltas[j] * prev->neurons[k];
+                if (i > 1) // Propaga erro para a camada anterior
+                    current_deltas[k] += next_deltas[j] * curr->weights[j * prev->size + k];
+            }
+        }
+        free(next_deltas);
+        next_deltas = current_deltas;
+        if (i > 1) { // Aplica derivada da ativação (exceto entrada)
+            for (int k = 0; k < prev->size; k++) 
+                next_deltas[k] *= relu_deriv(prev->neurons[k]);
+        }
+    }
+    free(next_deltas);
+}
+
+void update_weights(MLP *net, int batch_size) {
+    for (int i = 1; i < net->num_layers; i++) {
+        Layer *L = &net->layers[i];
+        int prev_size = net->layers[i-1].size;
+        for (int j = 0; j < L->size; j++) {
+            // SGD com Momentum para Bias
+            L->v_b[j] = net->momentum * L->v_b[j] - (net->lr * L->grad_b[j] / batch_size);
+            L->biases[j] += L->v_b[j];
+            L->grad_b[j] = 0;
+
+            for (int k = 0; k < prev_size; k++) {
+                int idx = j * prev_size + k;
+                // SGD com Momentum para Pesos
+                L->v_w[idx] = net->momentum * L->v_w[idx] - (net->lr * L->grad_w[idx] / batch_size);
+                L->weights[idx] += L->v_w[idx];
+                L->grad_w[idx] = 0;
+            }
+        }
+    }
+}
+
+int main() {
+    srand(time(NULL));
+    int topology[] = {2, 8, 4, 2}; // Entrada, Oculta 1, Oculta 2, Saída
+    MLP *net = create_mlp(topology, 4, 0.05f, 0.9f);
+
+    float in[4][2] = {{0,0},{0,1},{1,0},{1,1}};
+    float tg[4][2] = {{1,0},{0,1},{0,1},{1,0}};
+
+    for (int e = 0; e < 5000; e++) {
+        for (int s = 0; s < 4; s++) {
+            forward(net, in[s]);
+            backward(net, tg[s]);
+        }
+        update_weights(net, 4); // Mini-batch size 4
+        if (e % 1000 == 0) printf("Epoch %d: Weights updated with Momentum\n", e);
+    }
+
+    printf("Rede Neural Profissional Pronta.\n");
+    return 0;
+}
